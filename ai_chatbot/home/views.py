@@ -1,7 +1,7 @@
 from django.shortcuts import render,HttpResponse, redirect
 import openai
 import os
-from . models import Bot
+from . models import Bot,Profile
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import User
@@ -29,6 +29,14 @@ def chatbot_login(request):
 def chatbot_register(request):
     return render(request,'register.html')
 
+
+def profile(request):
+    user=request.user
+    details=Profile.objects.filter(user_details=user)
+    return render(request,'profile.html',{'details':details})
+
+
+@login_required
 def history(request):
     user=request.user
     data=Bot.objects.filter(user_chatbot=user)
@@ -72,8 +80,11 @@ def signin(request):
             messages.error(request, 'Invalid username or password')
             return render(request,'login.html')
     else:
-        return render(request,'login.html')   
+        return render(request,'login.html')
 
+
+
+@login_required
 def lgout(request):
     auth.logout(request)
     messages.info(request,'sucessfully logout ')
@@ -106,12 +117,53 @@ def chatapi(request):
     else:
         HttpResponse(" Bad Request")
 
+        
 
+@login_required
 def delete_chat(request):
     user=request.user
     Bot.objects.filter(user_chatbot=user).delete()
     data=Bot.objects.filter(user_chatbot=user)
-    return render(request,'history.html',{"data":data})        
+    return render(request,'history.html',{"data":data})  
+
+
+@login_required
+def delete_profile(request):
+    user=request.user
+    Profile.objects.filter(user_details=user).delete()
+    details=Profile.objects.filter(user_details=user)
+    return render(request,'profile.html',{"details":details})  
+   
+
+@csrf_exempt
+def add_profile(request):
+    if request.method == 'POST':
+        user=request.user
+        user_mob=request.POST['user_mob']
+        user_address=request.POST['user_address']
+        user_img=request.FILES['user_img']
+        if Profile.objects.filter(user_mob=user_mob):
+            messages.error(request,"Mobile number already used")
+            return render(request,'profile.html')
+        else:
+            Profile.objects.create(user_details=user,user_mob=user_mob,user_address=user_address,user_img=user_img)
+            details=Profile.objects.filter(user_details=user)
+            return render(request,'profile.html',{'details':details})
+    else:
+        details=Profile.objects.filter(user_details=user)
+        return render(request,'profile.html',{'details':details}) 
+
+
+def deactivate(request):
+    user=request.user
+    user.delete()
+    messages(request,"Account deactivated successfully ")
+    return render(request,'register.html')
+
+
+
+
+
 
 
 
